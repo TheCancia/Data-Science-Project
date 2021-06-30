@@ -1,0 +1,525 @@
+---
+title: "Analysis with quantmod"
+author: "Mauro"
+date: "17/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+Lo Scopo di questo markdown è effettuare una analisi dei dati provenienti dal Dow Jones Industrial Average --> DJI, impostando un delta T temporale variabile 
+per poter impostare la nostra analisi in un long range oppure un short range (richiesta definizione) 
+
+Installiamo i package :
+```{r}
+ install.packages("ggplot2")
+ install.packages("quantmod")
+ install.packages("magrittr")
+ library(ggplot2)
+ library(quantmod)
+ library(magrittr)
+# definiamo le librerie 
+```
+Installate le librerie allora dobbiamo andare ad ottenere i dati da Yahoo Finance (il nostro adorato Yahoo), gran bella cosa perchè non c'è necessità di caricare un dataset
+
+Tutto questo file non sarebbe possibile se non ci fosse la  libreria quantmod 
+andremo ad utilizzare diversi modi di visualizzazione dei dati sfruttando la base del quantitative financial modelling framework, questo package permette agli user di 
+specificare e analizzare strategie di ttrading finanziare. 
+
+Impostiamo le date di analisi per il nostro dataset 
+```{r}
+ # definie start e end date 
+ start_date <- as.Date("2017-01-01")
+ end_date <- as.Date("2018-02-09")
+ # dobbiamo utilizzare il set di date di default con R perchè in caso contrario Yahoo non ci fornirà i dati 
+```
+Per sicurezza andiamo a controllare se le date inserite sono delle date "giuste" 
+```{r}
+ lapply(start_date,class)
+ lapply(end_date, class)
+```
+
+Per ottenere i dati andremo a sfruttare getSymbols() 
+questa funzione ci permette di caricare un simbolo, che deve essere controllato a secondo degli standard, in un'enviroment specializzato; definiamo la sintassi della funzione getSymbols() : 
+
+ 1) Stock Ticker --> il simbolo che rappresenta un titolo, ad esempio AAPL 
+ 2) Source --> da dove provengono i dati 
+ 3) Delta T --> dobbiamo definire un intervallo di tempo che si definisce con from e to -> ovvero diamo un punto di partenza e di arrivo per l'analisi 
+```{r}
+ # otteniamo i simboli 
+ getSymbols("BTC-USD",src="yahoo",from=start_date,to=end_date)
+ # richiediamo un summary per questo ticker 
+ summary(`BTC-USD`)
+```
+ Da questo summary ci rendiamo conto che ci sono delle informazioni interessanti fornite da 6 fattori : 
+  1) Open -> il prezzo di apertura 
+  2) High -> il prezzo più alto raggiunto durante una giornata 
+  3) Low -> il prezzo minore raggiunto durante una giornata 
+  4) Close -> il prezzo di chiusura della giornata 
+  5) Volume -> i movimenti della gionrata (contratti venduti e comprati durante una giornata)
+  6) Adjusted -> prezzo di chiusura del titolo togliendo i grandi azionisti che muovono volumi maggiori (indicatore interessante)
+  
+Come visualizziamo questi prezzi ? 
+Avendo ottenuto questi dati tramite la funzione getSymbols() il nostro obbiettivo è visualizzare questi dati, lo andremo a fare in primis con la funzione plot() 
+```{r}
+plot(DJI[, "DJI.Close"], main = "Dow Jones Industrial Average | DJI")
+```
+Questo grafico è utile, ma fino ad un certo punto, molte analisi tecniche si basano sull'utilizzo dei grafici candlestick, questo viene fatto tramite la funzione 
+candleStick()
+
+```{r}
+ candleChart(`BTC-USD`,multi.col=TRUE,theme="white")
+```
+Inserire qualcosa riguardo ad i candle stick e i candlestick pattern 
+La parte più interessante dei candlestick pattern è la costumizzabilità dei grafici 
+
+Una analisi tecnica non sarebbe completa se non ci fosse una price comparison 
+Molti analisti tecnici pongono la loro attenzione nella diversificazione, ovvero non focalizzarsi su un determinato titolo ma diversificare i loro investimenti. 
+La nostra idea è comparare NYSE Composite Index (Nya) e Nasdaq inc. (Ndaq) rispetto al Dow Jones Industrial(Dij) analizzando il loro prezzo di chiusura. 
+Andremo ad eseguire questa analisi tramite step : 
+
+In primis andremo a caricare completamente i dati dell'Nyse Composite Index (NYA) e il Nasdaq inc. (NDAQ) nello stesso modo che abbiamo fatto prima : 
+```{r}
+ getSymbols("NYA",src="yahoo",from=start_date,to=end_date)
+ getSymbols("NDAQ",src="yahoo",from = start_date, to = end_date)
+ summary(NYA)
+```
+```{r}
+ summary(NDAQ)
+```
+Un fattore chiave è rappresentato dalla mediana dei prezzi di chiusura, i tre titoli variano da 72.10 fino a 22,216.
+Plottare il prezzo di chiusura rispetto ad un deltaT specificato risulterebbe una assurdità, perchè risulterebbe molto molto confusionario, ma cerchiamo di capire come variare questo plot a seconda di come ci serve. 
+```{r}
+ closing_price <- as.xts(data.frame(DJI = DJI[, "DJI.Close"], NYA = NYA[, "NYA.Close"], NDAQ = NDAQ[, "NDAQ.Close"]))
+ closing_price
+```
+Otteremo una Enorme quantità di dati, che se andassimo a plottare non andremo ad ottenere nessun tipo di dato interessante : 
+```{r}
+plot(as.zoo(closing_price), screens = 1, lty = 1:3, xlab = "Date", ylab = "Closing Price")
+legend("topleft", c("DJI", "NYA", "NDAQ"), lty = 1:3, cex = 0.5)
+```
+Visto questo plot ci rendiamo conto che è molto difficile definire un prezzo di chiusura, perchè abbiamo una grande variazione di prezzi, per visualizzare i dati in modo
+chiaro andremo ad usare la funzione xts(), più specificamente andremo a usare la funzione as.xts(), che ci fornisce una serie temporale estendibile dando la possibilità 
+ad R di analizzare al meglio i dati. 
+Andiamo a trasformare i nostri dati rispetto al nostro periodo di interesse tramite il magrittr package : 
+```{r}
+ returns <- apply(closing_price,1,function(x){x / closing_price[1,]}) %>%
+  t %>%
+  as.xts
+ summary(returns)
+```
+Visto questi dati ci rendiamo conto che i prezzi sono molto molto più leggibili, quindi proviamo a mandare in plot questi dati : 
+```{r}
+plot(as.zoo(returns), screens = 1, lty = 1:3, xlab = "Date", ylab = "Return")
+     legend("topleft", c("DJI", "NYA", "NDAQ"), lty = 1:3, cex = 0.5)
+```
+errore su legend 
+Chiaramente ci rendiamo conto che il prezzo di chiusura del DJI ha subito un drop notevole alla fine del 2018.
+
+
+Parte 2 
+Analisi tramite Business science 
+Il quantitative trading ha come base interessante R per lavorare con i dati, una idea interessante è analizzare tutti i titoli presenti nell'indice S&P500 per 
+analizzare il risk reward di ogni titolo, introducendo quantmod per ottenere i dati e calcolare i return, rvest per applicare procedure di web scraping la lista di
+titoli da wikipedia, purr per mappare le funzioni ed eseguire funzioni nei tibbles(ovvero i data-frame di tidyverse) e infine plotly per visualizzare il risk reward e estrarre informazioni interessanti. 
+
+Alla fine andremo ad ottenere una comparison di tutto il set di titoli del s&p500 andremo a screenare per ottenere i migliori prospetti a livello quantitativo
+per poi visualizzare la correlazione tra titoli per diversificare i nostri investimenti
+
+Andiamo a caricare le librerie necessarie per queste librerie 
+```{r}
+library(quantmod) # per ottenere i prezzi 
+library(xts) # per lavorare con le serie temporali 
+library(rvest) # per lavorare con lo scraping 
+library(tidyverse)
+library(stringr) # per lavorare con le stringhe 
+library(forcats) # lavoriamo con i fattori 
+library(lubridate) # lavoriamo con le date 
+library(plotly) # per i grafici
+library(corrplot) # per visualizzare i grafici di correlazione 
+```
+Come possiamo analizzare le azioni ? 
+Andiamo ad individuare 3 step per analizzare i titoli : 
+
+QuantMod Package : 
+solitamente andremo ad utilizzare il package quantmod per ottenere e manipolare le informazioni relative ai mercati azionari, andiamo ad introdurre i fondamenti, 
+in primis andiamo a caricare il package e utilizziamo il getSymbols() per ottenere i prezzi, usando l'input from to per limitare il range 
+```{r}
+ getSymbols("MA",from="2007-01-01",to="2016-10-23")
+```
+la funzione getSymbols è una funzione che permette di aggiungere una variabile globale all'enviroment di R con il Ticker e il nome del titolo come il nome della variabile. 
+
+XTS per le serie temporali 
+Analizzando il simbolo MA ci rendiamo conto che è un simbolo Xts che è un formato per manipolare le serie temporali, la nostra priorità è analizzare MA e studiare 
+la struttura dati degli Xts : 
+```{r}
+MA %>%
+ str()
+```
+possiamo richiedere i valori principali di questo titolo tramite la funzione head()
+```{r}
+ MA %>%
+  head()
+```
+Facciamo le prime osservazioni relative al nostro titolo MA : 
+
+ 1) l'indice è una colonna di date
+ 2) i valori osservati nella tabella sono prezzi e volumi, andremo ad analizzare primariamente l'adjusted price perchè toglie gli effetti dei grandi azionisti 
+ 
+Come possiamo combinare quantmod e xts ? 
+il package quantmod lavora molto bene con xts, possiamo plottare i valori tramite ---> quantmod::chartSeries(). 
+Ma perchè usiamo l'Adjusted ? perchè rimuove gli split, ed è eseguito tramite la funzione Ad() 
+```{r}
+MA %>%
+  Ad() %>%
+  chartSeries()
+```
+La funzione chartSeries() ha un sacco di opzioni per visualizzare le performance di un titolo, quali sono quelle che utilizzeremo di più ? 
+ 1) Subset --> prende le date e i range in un formato xts 
+ 2) Ta --> inserisce diversi indicatori finanziari 
+ 3) them --> varia il tema del grafico 
+
+```{r}
+MA %>%
+  chartSeries(TA = 'addBBands();
+                    addBBands(draw="p");
+                    addVo(); 
+                    addMACD()',
+              subset = '2016',
+              theme = "white"
+              )
+```
+Andando utilizzare il package quantmod per ottenere dati giornalieri, settimanali, mensili e annuali; andremo ad utilizzare dailyReturn() per ottenere un xts 
+il valore di default viene definito come aritmetico, andando a specificare il type = "log" se abbiamo bisogno (come nel nostro caso) di ottenere i valori log
+
+```{r}
+MA %>%
+  Ad() %>%
+  dailyReturn(type = 'log') %>%
+  head()
+```
+
+Simulare il Valore dei Prezzi 
+
+Ovviamente il titolo è simpatico, ma non eccitiamoci troppo, non possiamo inventarci niente, andremo ad usare un'approccio detto : Monte Carlo; L'idea fondamentale
+sta nel fatto che il ritorno di una azione(che sia giornaliero,settimanale,etc...) sono normalmente distribuiti e non correlati. Come risultato di questa osservazione potremo TEORICAMENTE prevedere il valore di un titolo con un intervallo di confidenza analizzando i ritorni precedenti.
+
+I Ritorni sono Distribuiti normalmente 
+Applicando la trasformazione logaritmica possiamo visualizzare i dati per ottenere qualcosa di interessante : 
+
+```{r}
+#otteniamo i dati 
+MA_log_returns <- MA %>%
+    Ad() %>%
+    dailyReturn(type = "log")
+names(MA_log_returns) <- "MA.Log.Returns"
+# Plot the log-returns    
+MA_log_returns %>%    
+    ggplot(aes(x = MA.Log.Returns)) + 
+    geom_histogram(bins = 100) + 
+    geom_density() +
+    geom_rug(alpha = 0.5) 
+```
+Analizzando questo grafico possiamo notare che questi ritorni rispettano (circa) la distribuzione normale dei valori
+Possiamo esaminare la distribuzione dei ritorni logaritmici applicando la funzione quantile() : 
+```{r}
+probs <- c(.005, .025, .25, .5, .75, .975, .995)
+dist_log_returns <- MA_log_returns %>% 
+    quantile(probs = probs, na.rm = TRUE)
+dist_log_returns
+```
+La mediana dei ritorni giornalieri è 0.001 con l'intervallo di confidenza del 95% si trova tra -0.0447 e 0.0475; 
+Andiamo a calcolare la Media e la Deviazione Standard : 
+```{r}
+ mean_log_returns <- mean(MA_log_returns,na.rm = TRUE)
+ sd_log_returns <- sd(MA_log_returns,na.rm=TRUE)
+```
+Avendo richiesto i ritorni nella versione log, possiamo richiederli in modo esponenziale tramite la funzione exp()
+```{r}
+ mean_log_returns %>%
+  exp()
+```
+E cosa otteniamo con questo valore ? 
+Ci rendiamo conto che abbiamo un ritorno dello 0.0976% maggiore rispetto al prezzo del giorno precedente, ad una prima analisi non ci sembra un gran che, ma se 
+consideriamo questo incremento a livello esponenziale ci rendiamo conto che questa variabilità è interessante. 
+
+Ottenuta la media e la deviazione standard non è che ci fermiamo al metodo di Monte Carlo, andiamo ad utilizzare la Random Walk (introdurre una piccola spiegazione).
+Andremo a simulare il prezzo di 1000 giornate di trade, eliminando il sabato e la domenica; ricordando che 1 anno ha 252 giorni di trading, quindi per arrivare a 1000 giorni, dobbiamo considerare 4 anni. 
+Andiamo a definire uno script che va a specificare il numero di Random Walk (con la variabile N), la media(mu) e la deviazione standard(sigma); ma qual'è l'obiettivo di questo script ? 
+Tramite esso andremo a simulare i prezzi in modo progressivo, andando a calcolare il nuovo prezzo usando un random return dalla distribuzione normale che a sua 
+volta è caratterizzata dalla media e da sigma per poi moltiplicarla per il prezzo del giorno precedente, andando poi a visualizzare la random walk. 
+```{r}
+# definiamo i parametri 
+N <- 1000
+mu <- mean_log_returns
+sigma <- sd_log_returns 
+day <- 1:N
+price_init <- MA$MA.Adjusted[[nrow(MA$MA.Adjusted)]]
+# definiamo la simulazione 
+set.seed(386)
+price <- c(price_init,rep(NA,N-1))
+# introduciamo un for per definire la nostra simulazione 
+for(i in 2:N){
+  price[i] <- price[i-1] * exp(rnorm(1,mu,sigma)) # dobbiamo andare ad analizzare rnorm che rappresenta la distribuzione normale 
+}
+price_sim <- cbind(day,price) %>%
+  as_tibble()
+# visualizziamo la simulazione 
+price_sim %>%
+  ggplot(aes(day,price)) +
+  geom_line() +
+  ggtitle(str_c("MA : i prezzi simulati per ",N," giorni di trading"))
+```
+Da questa simulazione sembra che siamo in perdita con questo investimento, ma possiamo fidarci di questa Walk ? 
+ASSOLUTAMENTE NO !! 
+Lo capiamo direttamente dal nome, stiamo effettuando una random walk, ed essa rappresenta uno delle possibili fluttuazioni, quindi per ottenre dati 
+leggermente affidabili dovremo eseguire diverse iterazioni per creare un intervallo di confidenza interessante. 
+
+Simulazione di Monte Carlo 
+Assieme alla random Walk andiamo ad introdurre una seconda simulazione, che evita tutti i problemi della random walk, ovvero esegue N iterazioni per 
+che andranno a simulare una random walk, per il nostro obbiettivo, andremo ad effettuare 250 simulazioni di Monte Carlo per un anno di trading. 
+```{r}
+# definiamo i parametri della simulazione  
+N <- 252 # definiamo il numero di titoli per la simulazione 
+M <- 250 # numero di simulazioni 
+mu <- mean_log_returns
+sigma <- sd_log_returns
+day <- 1:N
+price_init <- MA$MA.Adjusted[[nrow(MA$MA.Adjusted)]]
+# simuliamo i prezzi 
+set.seed(123)
+monte_carlo_mat <- matrix(nrow = N, ncol = M)
+for(j in 1:M){
+  monte_carlo_mat[[1,j]] <- price_init
+  for(i in 2:N){
+    monte_carlo_mat[[i,j]] <- monte_carlo_mat[[i-1,j]] * exp(rnorm(1,mu,sigma)) 
+  }
+}
+# creiamo ed organizziamo il df 
+price_sim <- cbind(day,monte_carlo_mat) %>%
+  as_tibble()
+nm <- str_c("Sim",seq(1,M))
+nm <- c("Day",nm)
+names(price_sim) <- nm 
+price_sim <- price_sim %>%
+  gather(key = "Simulation",value="Stock.Price",-(Day))
+# Visualizziamo la simulazione 
+price_sim %>%
+  ggplot(aes(x = Day, y = Stock.Price, Group = Simulation)) + 
+  geom_line(alpha = 0.1) + 
+  ggtitle(str_c("MA: ",M,"La simulzione di Monte Carlo per ", N, " Giorni di Trading"))
+```
+Definita la simulazione di Monte Carlo andiamo ad ottenere un intervallo di Confidenza per il prezzo alla fine della nostra simulazione tramite la 
+funzione quantile() 
+```{r}
+end_stock_prices <- price_sim %>%
+  filter(Day == max(Day))
+probs <- c(.005, .025, .25, .5, .75, .975, .995)
+dist_end_stock_prices <- quantile(end_stock_prices$Stock.Price, probs = probs)
+dist_end_stock_prices %>%
+  round(2)
+```
+Definito l'intervallo di Confidenza, ci rendiamo conto che il 95% si trova fra 69.37 and 227.69 con la mediana stimata quale --> $129.99
+
+
+Ma cosa ci dicono queste simulazioni ? 
+questa simulazione ci fornisce delle basi per comprendere quali sono le chiavi di una simulazione di questo tipo, in questo caso le parti più importanti sono la media e la deviazione standard dei ritorni in forma logaritmica, come ci siamo accorti ? 
+la media influenza la crescita della valutazione del titolo, mentre la deviazione standard ne caratterizza la volatilità e il rischio. -+
+Studiato un titolo perchè non dovremo estendere la nostra analisi ad un gruppo di titoli ? oppure a tutti ? 
+
+Perchè fermarci ad una singola analisi, quando potremo analizzare un listino completo, per effettuare questa analisi andiamo a definire uno stepper per definire al meglio il nostro progetto: 
+ 1) Otteniamo il listino completo del S&P500 
+ 2) Creiamo una funzione che ottenga dati da un determinato titolo, noi vorremo otteneere i prezzi e i return in forma logaritmica. 
+ 3) Sfruttiamo le funzioni di purrr per mappare la funzioni definita in precedenza per tutti i titoli 
+ 4) Visualizziamo i risultati 
+ 
+Partiamo con il primo punto, ovvero l'ottenere il listino, questo sarà possibile tramite funzioni di Web Scraping. 
+Andremo ad usare il package rvest per ottenere il listino S&P500 direttamente da Wikipedia, per poi utilizzare la funzione read_html() per ottenere 
+dati sotto forma html da wikipedia, per poi fare parsing tramite html_node() e html_table(), per poi leggere e ritornare i dati sotto forma di tibble. 
+```{r}
+# otteniamo la libreria 
+library(rvest)
+# definiamo la procedura di scraping 
+sp_500 <- read_html("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies") %>%
+    html_node("table.wikitable") %>%
+    html_table() %>%
+    select(`Symbol`, Security, `GICS Sector`, `GICS Sub-Industry`) %>%
+    as_tibble()
+# formattiamo i nomi 
+names(sp_500) <- sp_500 %>%
+  names() %>%
+  str_to_lower() %>%
+  make.names() 
+# mandiamo in output i risultati 
+sp_500
+
+```
+Ovviamente 505 righe sono interessanti da analizzare, ma certamente non sono semplici, cerchiamo di partire dall'inizio ovvero ottenere le categoire
+dove possiamo ritrovare questi dati, la funzione lapply() ci permette di scandire le colonne del dataset contando la lunghezza degli item univoci 
+```{r}
+sp_500 %>% 
+    lapply(function(x) x %>% unique() %>% length()) %>%
+    unlist() # visualizziamo i dati in modo "condensato" 
+```
+Per evitare di avere entry duplicate(cosa che non dovrebbe esistere dato che i dati arrivano da Wikipedia), ma controlliamo per sicurezza, andando ad usare le funzioni di dplyr come --> group_by(), summarize() e filter, 
+```{r}
+sp_500 %>%
+    group_by(security) %>%
+    summarize(count = n()) %>%
+    filter(count > 1)
+```
+Dopo avere eseguito questo controllo, continuiamo ad analizzare questi dati, ipotizziamo di voler analizzare la distribuzione di questi titoli 
+rispetto ad i loro settori, andando ad usare funzioni come group_by() e summarize() per ottenere il count. Per poi sfruttare il package forcast per organizzare i categorie i fattori ottenuti. 
+```{r}
+sp_500 %>%
+  # riassumiamo a seconda della frequenza 
+  group_by(gics.sector) %>%
+  summarise(count = n()) %>%
+  # visuallizziamo 
+  ggplot(aes(x = gics.sector %>%
+               fct_reorder(count), y = count 
+             )) + 
+  geom_bar(stat = "identity") + 
+  geom_text(aes(label = count),size = 3, nudge_y = 4,nudge_x = .1) +
+  scale_y_continuous(limits=c(0,100)) + 
+  ggtitle(label ="la frequenza di un settore rispetto al listino S&P500") + 
+  xlab(label = "GICS Sector") +
+  theme(plot.title = element_text(size = 16)) + 
+  coord_flip()
+```
+Il concetto di diversificazione è molto importante nell'analisi titoli, ma non ci soffermeremo molto su questo concetto, diciamo solo che una maggiore 
+diversificazione ci fornisce investimenti con un rischio minore, per motivi ovvi..
+ 
+Avendo ottenuto un dataframe "Tidy" fornitoci dal listino del S&P500 salvato nella variabile sp_500, ma cosa ci facciamo con questi dati ? 
+definiamo due punti importanti della nostra analisi : 
+ 1) otteniamo il prezzo dei titoli tramite la funzione getSymbols()
+ 2) Otteniamo i nostri amati ritorni logaritmici tramite periodReturn() 
+Andremo a definire dei nested-dataframe, che praticamente salva i dati in una lista nelle celle di sp_500, andiamo a definire le nostre funzioni : 
+
+1 --> otteniamo i prezzi. 
+Andiamo a definire una funzione get_stock_prices() che è un wrapper di quantmod::getSymbols().
+```{R}
+get_stock_prices <- function(ticker, return_format = "tibble", ...) {
+    # Get stock prices
+    stock_prices_xts <- getSymbols(Symbols = ticker, auto.assign = FALSE, ...)
+    # Rename
+    names(stock_prices_xts) <- c("Open", "High", "Low", "Close", "Volume", "Adjusted")
+    # Return in xts format if tibble is not specified
+    if (return_format == "tibble") {
+        stock_prices <- stock_prices_xts %>%
+            as_tibble() %>%
+            rownames_to_column(var = "Date") %>%
+            mutate(Date = ymd(Date))
+    } else {
+        stock_prices <- stock_prices_xts
+    }
+    stock_prices
+}
+```
+
+Facciamo una prova 
+```{R}
+"MA" %>%
+  get_stock_prices(return_format = 'tibble')
+```
+Alcune considerazioni dobbiamo fare : 
+ 1) abbiamo creato un'oggetto locale che viene immediatamente mandato in print.
+ 2) l'oggetto che viene ritornato ha una struttura di base composta da colonne 
+ 3) dobbiamo specificare chi viene nestato. 
+
+Come otteniamo i nostri ritorni in versione logaritmica ? 
+```{R}
+get_log_returns <- function(x, return_format = "tibble", period = 'daily', ...) {
+    # Convert tibble to xts
+    if (!is.xts(x)) {
+        x <- xts(x[,-1], order.by = x$Open)
+    }
+    # Get log returns
+    log_returns_xts <- periodReturn(x = x$Adjusted, type = 'log', period = period, ...)
+    # Rename
+    names(log_returns_xts) <- "Log.Returns"
+    # Return in xts format if tibble is not specified
+    if (return_format == "tibble") {
+        log_returns <- log_returns_xts %>%
+            as_tibble() %>%
+            rownames_to_column(var = "Date") %>%
+            mutate(Date = ymd(Date))
+    } else {
+        log_returns <- log_returns_xts
+    }
+    log_returns
+}
+```
+testiamo questa funzione
+```{R}
+"MA" %>% 
+    get_stock_prices(return_format = "tibble") %>% 
+    get_log_returns(return_format = "tibble") 
+```
+Partiamo con la parte divertente 
+andiamo a definire i due dataframe, considerando il fatto che possiamo storare dataframe nelle celle del dataframe 
+
+```{R}
+sp_500
+sp_500 <- sp_500 %>%
+    mutate(
+        stock.prices = map(symbol, 
+                              function(.x) get_stock_prices(.x, 
+                                                            return_format = "tibble",
+                                                            from = "2007-01-01",
+                                                            to = "2016-10-23")
+                           ),
+        log.returns  = map(stock.prices, 
+                              function(.x) get_log_returns(.x, return_format = "tibble")),
+        mean.log.returns = map_dbl(log.returns, ~ mean(.$Log.Returns)),
+        sd.log.returns   = map_dbl(log.returns, ~ sd(.$Log.Returns)),
+        n.trade.days = map_dbl(stock.prices, nrow)
+        )  
+```
+diamo un'occhiata al tibble 
+```{R}
+sp_500$stock.prices[[1]] 
+```
+Richiediamo il ritorno logaritmico 
+```{R}
+get_log_returns <- function(x, retun_format = "tibble", period = 'daily',...){
+  # convertiamo il tibble in xts 
+  if(!is.xts(x)){
+    x <- xts(x[,-1],order.by = x$Date)
+  }
+  # otteniamo i ritorni logaritmici 
+  log_return_xts <- periodReturn(x = x$Adjusted, type = 'log', period = period, ..)
+  # rename 
+  names(log_return_xts) <- "Log.Returns"
+  # ritorniamo in xts se tibble non è specificato 
+  if(return_format == "tibble"){
+    log_returns <- log_return_xts %>%
+      as_tibble() %>%
+      rownames_to_column(var = "Date") %>%
+      mutate(Date = ymd(Date))
+  }else{
+    log_returns <- log_return_xts
+  }
+ log_returns 
+}
+```
+Testiamo la funzione 
+```{R}
+"MA" %>%
+  get_stock_prices(return_format = "tibble") %>%
+  get_log_returns(return_format = "tibble")
+```
+Andiamo ad usare purr::map() per definire un data-frame nestato, dato che i dataframe possono storare liste nelle loro colonne, allora la funzione map() ci permette 
+di mappare funzioni nei data-frame nestati; avendo la possibilità di estendere complessi calcoli per loopare le istruzioni in data-frame.
+```{R}
+sp_500
+sp_500 <- sp_500 %>%
+  mutate(
+    stock.prices = map(ticker.symbol)
+  )
+```
+
