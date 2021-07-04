@@ -1,0 +1,239 @@
+---
+title: "Progetto Data Science"
+author: "Mauro"
+date: "3/7/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Quantitative Stock Analysis to Screen the return of S&P 500 stocks 
+
+Le strategie di Trading quantitative stanno soppiantando l'analisi grafica tradizionali, lo scopo di questa analisi è ottenere un risk
+reward di ogni titolo proveniente dal S&P 500, non andremo ad utilizzare i classici return bensì quelli logaritmici per ottenere delle informazioni più "affidabili". 
+Non ho utilizzato un dataset pre-esistente bensì delle procedure di Web-Scraping per ottenere la lista dei titoli di S&P500, chiaramente abbiamo la possibilità di analizzare anche i titoli del nostro Ftse-Mib. 
+
+Quali sono i nostri pre-requisiti ? 
+andiamo ad installare i package necessari : 
+```{r}
+library(quantmod)   # per ottenere i prezzi dei titoli
+library(xts)        # xts ci permette di lavorare con delle serie temporali 
+library(rvest)      # libreria essenziale per il web scraping con R 
+library(tidyverse)  # il nostro amato tidy 
+library(stringr)    # working with strings
+library(forcats)    # working with factors
+library(lubridate)  # working with dates in tibbles / data frames
+library(plotly)     # Interactive plots
+library(corrplot)   # Visuazlize correlation plots
+```
+Prima di studiare tutti i titoli del S&P500 dobbiamo in primis rendersi conto come possiamo analizzare un titolo. 
+La base di tutta la nostra analisi sta nel package QuantMod, che ci permette di ottenere e analizzare informazioni relative ad i titoli
+azionari, è difficile analizzare dei dati se non definiamo una serie temporale. 
+Una delle funzioni di base di QuantMod sta in -> getSymbols. 
+```{r}
+getSymbols("TSLA", from = "2021-01-01", to = "2021-07-02")
+```
+Tramite la funzione getSymbols abbiamo la possibilità di aggiungere una variabile globale all'enviroment di R. 
+
+Ma come possiamo utilizzare questi dati ? 
+è qui che entra in gioco Xts, tramite la xts vignette abbiamo la possibilità di lavorare con le serie temporali.
+cosa abbiamo ottenuto con summary ? 
+```{r}
+TSLA %>% head()
+```
+abbiamo: 
+  1) Abbiamo come indice delle date
+  2) i valori più interessanti sono i prezzi e il volume, ma per chiarezza dovremo andare ad utilizzare il Adjusted per evitare di 
+     elaborare gli splits. 
+Ma come possiamo utilizzare il package QuantMod assieme a Xts ? 
+Tramite quantmod abbiamo la possibilità di lavorare con oggetti formattati, possiamo andare a definire plot tramite la funzione 
+chartSeries(). 
+```{r}
+TSLA %>%
+  Ad() %>%
+  chartSeries()
+```
+Questa funzione restituisce un grafico interessante, ma non ci dice troppissimo, quindi andiamo ad introdurre altre funzioni per 
+permetterci di visualizzare le performance di un titolo. 
+```{r}
+TSLA %>%
+    chartSeries(TA='addBBands();
+                    addBBands(draw="p");
+                    addVo();
+                    addMACD()', 
+                subset='2021',
+                theme="white"
+                ) 
+```
+Tramite questo package abbiamo la possibilità di includere delle funzioni per analizzare i returns -> giornalieri, settimanali, mensili e annuali. 
+Per iniziare la nostra analisi andremo a richiedere i dailyReturns del nostro titolo : 
+```{r}
+TSLA %>%
+  Ad() %>%
+  dailyReturn(type = 'log') %>%
+  head()
+```
+Andiamo a visualizzare i primi return del nostro titolo, chiaramente avremo una distinzione tra return negativi e return positivi possiamo 
+pensare di dividere questi dati a seconda del loro segno ma non è molto interessante per il mio scopo. 
+
+Visto che non ci interessa il return, cosa ci serve ? 
+Lo scopo principale di questo progetto sta nella Simulazione dei prezzi di un titolo. 
+Il sistema che tenterò di replicare in R è stato ispirato da rForTraders.com e dalle lezioni di statistica del semestre precedente; l'idea 
+fondamentale di questa presentazione sta nel fatto che i returns di un titolo sono (in modo approssimativo) distribuiti normalmente e non-correlati; tramite questa assunzione noi possiamo teoricamente definire un modello che ci permetta di definire il possibile futuro 
+comportamento di un titolo in un intervallo di confidenza. 
+
+Iniziamo a controllare se i Returns sono distribuiti normalmente
+```{r}
+TSLA_log_returns <- TSLA %>%
+  Ad() %>%
+  dailyReturn(type = "log")
+# richiediamo il ritorno logaritmico 
+TSLA_log_returns %>%
+  ggplot(aes(x = TSLA_log_returns)) + 
+  geom_histogram(bins = 100) + 
+  geom_density() + 
+  geom_rug(alpha = 0.5)
+```
+Chiaramente non abbiamo una corrispondenza perfetta, ma possiamo renderci conto che c'è una leggera tendenza. 
+Solamente con questa distribuzione non otteniamo nulla, andiamo ad inserire anche la ricerca della funzione quantile(). 
+```{r}
+probs <- c(.005, .025, .25, .5, .75, .975, .995) # definiamo gli intervalli 
+dist_log_returns <- TSLA_log_returns %>%
+  quantile(probs = probs, na.rm = TRUE) # chiediamo la rimozione dei nulli 
+dist_log_returns
+```
+chiediamo qual'è la Media e la Deviazione standard dei ritorni logaritmici. 
+```{r}
+mean_log_returns <- mean(TSLA_log_returns, na.rm = TRUE)
+sd_log_returns <- sd(TSLA_log_returns, na.rm = TRUE)
+mean_log_returns
+sd_log_returns
+```
+La media non ci ritorna un valore negativo che può essere un primo punto di partenza per la nostra analisi, ma per ottenere una informazione
+ancora più interessante, andiamo a richiedere tramite la funzione exp() per ottenre i ritorni "veri" 
+```{r}
+mean_log_returns %>%
+  exp()
+```
+brutte notizie da questo valore, abbiamo una tendenza negativa per i ritorni rispetto al giorno precedente. 
+
+Da questi valori abbiamo ottenuto un ritorno precedente negativo, ma andiamo a definire i passaggi di base per la simulazione dei prezzi. 
+
+  RANDOM WALK 
+
+Ricordiamo che la Random Walk è un "processo matematico" che descrive un percorso costituito da una successione di passaggi casuali equiprobabili. 
+Visto che abbiamo ottenuto la Media e la Deviazione Standard, andiamo a definire la RandomWalk per una simulazione di 1000 trading Days 
+Ricordiamo che in una settimana i Trading Days sono dal Lunedì al Venerdì, rimuovendo i giorni feriali e i Week-End. 
+
+Andiamo a definire il codice per la nostra RandomWalk, che :
+  inizia specificando il numero di Walks, definisce la media e la deviazione standard.
+  Simula il prezzo in modo Progressivo, ovveero calcola il nuovo prezzo usando il return calcolato in modo randomico che a sua volta viene 
+  moltiplicato per il prezzo del giorno precedente. 
+
+```{r}
+# definiamo i parametri 
+N <- 1000
+mu <- mean_log_returns
+sigma <- sd_log_returns
+day <- 1:N
+price_init <- TSLA$TSLA.Adjusted[[nrow(TSLA$TSLA.Adjusted)]]
+# come detto in precedenza andiamo ad usare la Adjusted per eliminare gli Split 
+set.seed(386)
+price <- c(price_init, rep(NA, N-1))
+# tramite un ciclo for andiamo a calcolare i prezzi 
+for(i in 2:N){
+  price[i] <- price[i-1] * exp(rnorm(1, mu, sigma))
+}
+price_sim <- cbind(day,price) %>%
+  as_tibble()
+# andiamo a visualizzare questa simulazione 
+price_sim %>%
+  ggplot(aes(day,price)) + 
+  geom_line() + 
+  ggtitle(str_c("Andiamo a definire la simulazione dei prezzi di TSLA per", N, " Giorni di Trading"))
+```
+Questa simulazione è interessante anche perchè ci rendiamo conto che per 1000 giorni di trading andremo a perdere molti soldi
+Ma possiamo fidarci di questa simulazione ? NO! 
+Dobbiamo andare simulare N iterazioni per definire un intervallo di confidenza. 
+
+Come definiamo la Simulazione di Monte Carlo ? 
+La simulazione di monte carlo ci permette di eseguire in quantità ripetute la simulazione di Monte Carlo, andremo ad eseguire la Random Walk 
+per 250 iterazioni 
+```{r}
+# definiamo i parametri 
+N <- 252 # il numero di prezzi da simulare 
+M <- 250 # il numero di simulazioni 
+mu <- mean_log_returns
+sigma <- sd_log_returns
+day <- 1:N 
+price_init <- TSLA$TSLA.Adjusted[[nrow(TSLA$TSLA.Adjusted)]]
+# andiamo a simulare i prezzi 
+set.seed(123)
+monte_carlo_mat <- matrix(nrow = N, ncol = M)
+for(j in 1:M){
+  monte_carlo_mat[[1,j]] <- price_init
+  for(i in 2:N){
+    monte_carlo_mat[[i,j]] <- monte_carlo_mat[[i-1,j]] * exp(rnorm(1, mu, sigma))
+  }
+}
+# avendo creato un dataframe è necessario organizzarlo in modo "chiaro" 
+price_sim <- cbind(day, monte_carlo_mat) %>%
+  as_tibble()
+nm <- str_c("Sim", seq(1,N))
+nm <- c("Day", nm)
+names(price_sim) <- nm 
+price_sim <- price_sim %>%
+  gather(key = "Simulation", value = "Stock.Price", -(Day))
+# visualizziamo la simulazione 
+price_sim %>%
+    ggplot(aes(x = Day, y = Stock.Price, Group = Simulation)) + 
+    geom_line(alpha = 0.1) +
+    ggtitle(str_c("TSLA: ", M, 
+                  " Simulazione di Monte Carlo per  ", N, 
+                  " Giorni di Trading "))
+
+```
+Come in precedenza andiamo a richiedere l'intervallo di confidenza dei prezzi alla fine della simulazione 
+```{r}
+end_stock_prices <- price_sim %>%
+  filter(Day == max(Day))
+probs <- c(.005, .025, .25, .5, .75, .975, .995)
+dist_end_stock_prices <- quantile(end_stock_prices$Stock.Price, probs = probs)
+dist_end_stock_prices  %>%
+  round(2)
+```
+Ma possiamo realmente fidarci di questa simulazione ? 
+Qui subentra il CAGR ovvero il Compound Annual Growth rate -> CAGR : 
+```{r}
+# definiamo i nostri input 
+N_hist <- nrow(TSLA) / 252 
+p_start_hist <- TSLA$TSLA.Adjusted[[1]]
+p_end_hist <- TSLA$TSLA.Adjusted[[nrow(TSLA)]]
+N_sim <- N / 252
+p_start_sim <- p_end_hist
+p_end_sim <- dist_end_stock_prices[[4]]
+#introduciamo il CAGR (i valori sono stati ottenuti dal loro summary)
+CAGR_historical <- (p_end_hist / p_start_hist) ^ (1 / N_hist) - 1
+CAGR_sim        <- (p_end_sim / p_start_sim) ^ (1 / N_sim) - 1
+CAGR_historical
+```
+
+```{r}
+CAGR_sim
+```
+Abbiamo una differenza di 0.0147 tra la nostra simulazione e i dati storici, chiaramente non ho mai preteso di ottenere una simulazione 
+perfetta, ma mi ci sono avvicinato. 
+
+Quali sono i Driver principali della nostra simulazione ? Ovviamente come viene dimostrato nel codice andiamo ad utilizzare la media e la 
+deviazione standard assieme ad il rendimento sotto la scala logaritmica, ma che peso hanno questi fattori ? 
+la media caratterizza la crescita (in media) del rendimento di un titolo, mentre la deviazione standard ci fornisce una misura di 
+volatilità / rischio. 
+
+In Conclusione abbiamo ottenuto una differenza di 0.0147 rispetto ad i dati storici forniti dal Cagr, tramite lo studio del rendimento 
+sotto la scala logaritmica, mi ritengo soddisfatto dei dati ottenuti propio perche ho ottenuto un intervallo di confidenza interessante per 
+un possibile investimento. 
+
+ 
