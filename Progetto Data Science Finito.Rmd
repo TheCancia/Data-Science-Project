@@ -21,7 +21,7 @@ knitr::opts_chunk$set(cache = TRUE, message = FALSE, warning = FALSE)
 
 Se conoscessi il modo per predirre in modo consistente il rendimento di un titolo di certo non lo racconterei così tranquillamente XD.
 
-tramite questa breve presentazione tenterò, tramite due modelli matematici, quali la Random Walk e La Camminata di Monte Carlo di predirre il futuro rendimento di un titolo Azionario quotato nell'indice S&P 500. 
+tramite questa breve presentazione tenterò, tramite due modelli matematici, quali la Random Walk e La Camminata di Monte Carlo di predirre il futuro rendimento di un titolo Azionario. 
 Per confermare queste asserzioni andrò ad utilizzare il CAGR, un indicatore che rappresenta la crescita percentuale di un titolo. 
 
 
@@ -29,22 +29,17 @@ Per confermare queste asserzioni andrò ad utilizzare il CAGR, un indicatore che
 
 è il sogno di qualsiasi trader avere la possibilità di predirre il futuro, enventi come la bolla di internet, il tracollo finanziario del 2008 oppure l'attuale pandemia, hanno contribuito a cambiare completamente lo scenario della finanza moderna. 
 
-Pensare di predirre questi eventi è fantascienza, ma possiamo studiare e applicare dei metodi sempre più interessanti per ottenere possibili
-rendimenti futuri. Nella mia poca espreienza come Trader mi sono reso conto che nulla è così semplice (come sembra da fuori), la volatilità  
-purtroppo non ci permette di definire delle predizioni così chiare; ma un'approccio di investimento chiamato Quantitative Trading si prefissa
-di usare Modelli Matematici per provare a predirre Rendimenti e prezzi Futuri. 
-Personalmente abbraccio questo movimento a braccia aperte, sia per una propensione Matematica, sia per la possibilità di implementare questi
-modelli in Linguaggi di programmazione come R e Python. 
-In questa breve presentazione andremo ad utilizzare 2 modelli molto interessanti che ci permettono sia di simulare l'andamento di un prezzo 
-sia di eseguire questa simulazione N volte. 
+Pensare di predirre questi eventi è fantascienza, ma possiamo studiare e applicare dei metodi sempre più interessanti per ottenere possibili rendimenti futuri. Nella mia poca espreienza come Trader mi sono reso conto che nulla è così semplice (come sembra da fuori), la volatilità purtroppo non ci permette di definire delle predizioni così chiare; ma un'approccio di investimento chiamato Quantitative Trading si prefissa di usare Modelli Matematici per provare a predirre Rendimenti e prezzi Futuri. 
+Personalmente abbraccio questo movimento a braccia aperte, sia per una propensione Matematica, sia per la possibilità di implementare questi modelli in Linguaggi di programmazione come R e Python. 
+In questa breve presentazione andremo ad utilizzare 2 modelli molto interessanti che ci permettono sia di simulare l'andamento di un prezzo sia di eseguire questa simulazione N volte. 
 
 ## Quali sono questi Modelli ? 
  La spina dorsale di questa analisi si basa su 2 modelli e una teoria : 
  
-   1) Il Secondo pilastro della filosofia di Trading di John Murphy, ovvero : " Il Mercato si Ripete".   
+   1) le Teorie psicologiche della massa, ovvero : " Il Mercato si Ripete".   
    2) La Random Walk -> la formalizzazione dell'idea di prendere passi successivi in direzioni casuali. 
-   3) La Simulazione di Montecarlo -> Un metodo per Trarre stime attraverso le simulazioni, generando una serie di Numeri  
-                                      che tra loro non sono correlati, e che seguono una distribuzione di probabilità.  
+   3) La Simulazione di Montecarlo -> Un metodo per Trarre stime attraverso le simulazioni, generando una serie di Numeri che tra loro non 
+      sono correlati, e che seguono una distribuzione di probabilità.  
 
 Specifichiamo le librerie. 
 
@@ -73,13 +68,13 @@ TSLA %>% head()
 ```
 La tabella contiene i dati essenziali di una qualsiasi analisi tecnica, ovvero il prezzo di apertura, chiusura, massimo, minimo, il volume e l'adjusted price.
 Ricordiamo che la natura di questi dati è influenzata da moltissimi fattori (anche non strettamente economici, vedasi i tweet di Elon Musk, oppure la CoCa Cola e Ronaldo), quindi andiamo a considerare l'Adjusted, ovvero il valore di un titolo azionario omettendo gli Stock Split.
-Ottenuti i dati possiamo subito richiedere una chartSeries che includa il prezzo di chiusura.
 ```{r, echo = FALSE}
 TSLA %>% 
   Ad() %>%
   chartSeries()
 ```
-Prima di iniziare ad analizzare in modo più approfondito questo titolo, visualizziamolo tramite una Chart Series, ovvero l'espressione del prezzo di chiusura di un titolo azionario (in questo caso Tsla), di primo impatto ci rendiamo conto che ha subito una flessione importante, ma questo grafico ci dice ben poco, andiamo ad approfondire meglio questo andamento tramite qualche indicatore tecnico. 
+Prima di iniziare ad analizzare in modo più approfondito questo titolo, visualizziamolo tramite una Chart Series ovvero l'espressione del prezzo di chiusura di un titolo azionario sotto forma grafica (in questo caso Tsla), di primo impatto ci rendiamo conto che ha subito una flessione importante, ma questo grafico ci dice ben poco, andiamo ad approfondire meglio questo andamento tramite qualche indicatore tecnico. 
+
 ## Un'occhiata al Grafico 
 
 Un'approccio diametralmente opposto rispetto al Quantitative Trading è il Trading con i Grafici, ovvero l'utilizzo di grafici
@@ -101,9 +96,8 @@ TSLA %>%
 ```
 Una occhiata veloce a questo grafico ci potrebbe suggerire una situazione di acquisto interessante, dato che abbiamo una Moving Average favorevole con dei volumi contenuti ed un RSI che si mantiene nella Zona del Buy. 
 
-Ma non mi fido dei grafici, quindi per controllare questa asserzione in primis vado a richiedere il Rendimento sotto scala 
-Logaritmica, usiamo questa scala per ragioni prettamente strutturali, date dal fatto che assumiamo i prezzi come distribuiti
-normalmente. 
+Ma personalmente non mi fido dei grafici, quindi per controllare questa asserzione in primis vado a richiedere il Rendimento sotto scala 
+Logaritmica, usiamo questa scala per ragioni prettamente strutturali, date dal fatto che assumiamo i prezzi (non i rendimenti) come distribuiti normalmente. 
 
 ```{r, echo = FALSE}
 TSLA %>%
@@ -112,16 +106,15 @@ TSLA %>%
   head()
 ```
 Tramite questa funzione abbiamo ottenuto il rendimento sotto scala logaritmica per i primi giorni di gennaio di Tesla, 
+Testiamo questi dati tramite un grafico. 
 
 ## Iniziamo a Visualizzare qualche Valore interessante 
  
 Questa parte è stato ispirato da rForTraders.com e dalle lezioni di statistica del semestre precedente.
 
-Supponiamo i dati come Non-Correlati e equi-distribuiti, solo grazie ad possiamo teoricamente definire un modello che ci permetta di definire il possibile futuro comportamento di un titolo in un intervallo di confidenza. 
-Ricordiamo che in statistica quando si stima un parametro è spesso insufficente individuare un singolo valore, quando eseguiamo una stima 
-qualsiasi dobbiamo includere un intervallo di valori plausibili per il parametro che abbiamo stimato. 
+Visualizziamo il rendimento passato e lo mettiamo a confronto con la distribuzione normale, dato che è la prima approssimazione per descrivere
+variabilili casuali in valori reali, possiamo farlo perchè supponiamo i dati come uniformemente distribuiti e non correlati. 
 
-Iniziamo a controllare se il rendimento viene distribuito normalmente
 ```{r, echo = FALSE}
 TSLA_log_returns <- TSLA %>%
   Ad() %>%
@@ -134,14 +127,31 @@ TSLA_log_returns %>%
   geom_rug(alpha = 0.5)
 ```
 Purtroppo non abbiamo una chiara corrispondenza a livello grafico con la distribuzione normale, questo probabilmente è dovuto ad i movimentimolto incerti del mercato azionario attuale. 
-Assieme a questa distribuzione andiamo a definire un'intervallo di Confidenza 
+```{r, echo = FALSE}
+getSymbols("MA", from = "2007-01-01", to = "2016-10-23")
+MA_log_returns <- MA %>%
+  Ad() %>%
+  dailyReturn(type = "log")
+# richiediamo il ritorno logaritmico 
+MA_log_returns %>%
+  ggplot(aes(x = MA_log_returns)) + 
+  geom_histogram(bins = 100) + 
+  geom_density() + 
+  geom_rug(alpha = 0.5)
+```
+Da questo grafico possiamo notare che abbiamo  una chiara corrispondenza con la distribuzione normale per i rendimenti di MasterCard 
+da gennaio 2007 a ottobre 2016. 
+
+
+Ricordiamo che in statistica quando si stima un parametro è spesso insufficente individuare un singolo valore, quando eseguiamo una stima qualsiasi dobbiamo includere un intervallo di valori plausibili per il parametro che abbiamo stimato. 
+
 ```{r,echo = FALSE}
-probs <- c(.005, .025, .25, .5, .75, .975, .995) # definiamo gli intervalli 
+probs <- c(.005, .025, .25, .5, .60 ,.75, .975, .995) # definiamo gli intervalli 
 dist_log_returns <- TSLA_log_returns %>%
   quantile(probs = probs, na.rm = TRUE) # chiediamo la rimozione dei nulli 
 dist_log_returns
 ```
-Buone notizie ! Abbiamo iniziato a definire un intervallo dove troviamo il nostro rendimento. 
+Buone notizie ! possiamo vedere che c'è una chiara suddivisione tra rendimenti positivi e rendimenti negativi in questo intervallo di confidenza. 
 
 Visto che il nostro studio si basa sulla scala logaritmica andiamo a richiedere il rendimento in media e la deviazione standard. 
 ```{r, echo = FALSE }
@@ -159,6 +169,9 @@ Otteniamo un intero < 1 quindi abbiamo una tendenza che è riconducibile ad un r
 opportuno definire un grafico che compara un titolo con un rendimento in media positivo. 
 
 ##  RANDOM WALK 
+
+#### Entriamo nella parte interessante 
+
 Definiamo  la Random Walk come un "oggetto" matematico che definisce un percorso, esso viene definito come una successione di "passi" 
 randomici definiti in uno spazio matematico (solitamente gli interi). 
 L'esempio standard della Random Walk è : supponiamo di partire da 0, il passaggio da 0 a -1 e da 0 a +1 sarà equiprobabile. 
@@ -175,7 +188,7 @@ il prezzo del giorno precedente.
 Ricordo che visto che stiamo effettuando delle simulazioni abbiamo la necessità di definire un seed, ovvero un intero utilizzato per
 contraddistinguere questo parametro. 
 
-```{r}
+```{r, echo = FALSE}
 # definiamo i parametri 
 N <- 1000
 mu <- mean_log_returns
@@ -211,22 +224,24 @@ una sequenza di numeri casuali.
 Questa propietà ci permette di concatenare queste due teorie (Random Walk e Monte Carlo), dato che tramite la Random Walk definiamo una 
 serie di valori randomici; in modo più pratico abbiamo la possibilità di stimare la variabile aletatoria obbiettiva (il rendimento) andando
 a generare un numero sufficentemente elevato di Scenari (iterazioni) casuali con i quali costruire la distribuzione di frequenza. 
-In questo caso andremo ad eseguire 300 giorni e 300 simulaizoni. 
+In questo caso andremo ad eseguire 252 Random Walk e 250 simulaizoni di monte carlo. 
 
-```{r}
+```{r, echo = FALSE}
 # definiamo i parametri 
-N <- 300
-M <- 300  
+N <- 252
+M <- 250  
 mu <- mean_log_returns
 sigma <- sd_log_returns
 day <- 1:N 
-price_init <- TSLA$TSLA.Adjusted[[nrow(TSLA$TSLA.Adjusted)]]
+price_init <- TSLA$TSLA.Adjusted[[nrow(TSLA$TSLA.Adjusted)]] # richiediamo i dati 
 # andiamo a simulare i prezzi 
+# definiamo una simulazione tramite set.seed 
 set.seed(123)
 monte_carlo_mat <- matrix(nrow = N, ncol = M)
 for(j in 1:M){
   monte_carlo_mat[[1,j]] <- price_init
   for(i in 2:N){
+    # eseguiamo il calcolo del prezzo 
     monte_carlo_mat[[i,j]] <- monte_carlo_mat[[i-1,j]] * exp(rnorm(1, mu, sigma))
   }
 }
@@ -248,27 +263,25 @@ price_sim %>%
 
 ```
 Come in precedenza andiamo a richiedere l'intervallo di confidenza dei prezzi alla fine della simulazione 
-```{r, echo = FALSE}
+```{r,echo = FALSE}
 end_stock_prices <- price_sim %>%
   filter(Day == max(Day))
-probs <- c(.005, .025, .25, .5, .75, .975, .995)
+probs <- c(.005, .025, .25, .5, .75, .80 ,.975, .995)
 dist_end_stock_prices <- quantile(end_stock_prices$Stock.Price, probs = probs)
 dist_end_stock_prices  %>%
   round(2)
 ```
-Purtroppo abbiamo una distribuzione di dati (e qundi di rendimenti) molto ampi, ma  il nostro grafico presenta degli ovvi outliner, anche se 
-possiamo notare tra 100 a 1500 abbiamo una grande concentrazione di predizioni. 
+Purtroppo abbiamo una distribuzione di dati (e qundi di rendimenti) molto ampi, ma  il nostro grafico presenta degli ovvi outliner, anche se possiamo notare tra 177 a 946.91 abbiamo una grande concentrazione di predizioni (l'80%). 
 Eseguite queste due simulazioni dobbiamo chiederci se tutto questo ha senso, abbiamo la possibilità di farlo tramite il C.A.G.R 
 
 ## Ma possiamo realmente fidarci di questa simulazione ? 
 Il Tasso Composto di Crescita Annuo o CAGR (per usare acronimi anglosassoni), rappresenta la crescita percentuale media di una grandezza in un lasso di tempo; solitamente questo tasso viene usato per determinare il fatturato di una Azione all'anno, fornendoci la crescita percentuale.
-Per chiarezza definiamo il Tasso di Crescita -> il rapporto fra crescita e Valore iniziale --> $[X1-X0]/X0$ Dove X1 e X0 sono due istanti temporali differenti, Se consideriamo più istanti temporali dobbiamo ricalcolare la crescita sul periodo precedente. 
+Per chiarezza definiamo il Tasso di Crescita come il rapporto fra crescita e Valore iniziale --> $[X1-X0]/X0$ Dove X1 e X0 sono due istanti temporali differenti, Se consideriamo più istanti temporali dobbiamo ricalcolare la crescita sul periodo precedente. 
 La prima epoca sarà -> $X1 = X0[c+1]*2$; la seconda sarà -> $X2 = X1[c+1]$
-Questa struttura sarà ripetuta per un N iterazioni dando per scontato un tasso di Crescita costante. 
 
 Noi utilizzeremo il CAGR come un'indicatore per calcolare il rendimento medio di un investimento in un dato periodo, ottenendo una performance media annuale. 
 
-```{r, echo = FALSE}
+```{r}
 # definiamo i nostri input 
 N_hist <- nrow(TSLA) / 252 
 p_start_hist <- TSLA$TSLA.Adjusted[[1]]
@@ -281,19 +294,19 @@ CAGR_historical <- (p_end_hist / p_start_hist) ^ (1 / N_hist) - 1
 CAGR_sim        <- (p_end_sim / p_start_sim) ^ (1 / N_sim) - 1
 CAGR_historical
 ```
+I dati storici provenienti dal CAGR sono -> -0.13806
 
 ```{r}
 CAGR_sim
 ```
+mentre i dati provenienti dalla nostra simulazione sono -> -0.09592
 ```{r}
 diff <- CAGR_historical - CAGR_sim
 diff
 ```
 
-In Conclusione io mi ritengo soddisfatto, abbiamo ottenuto una differenza di $-0.04213$ tra il CAGR e la simulazione, ci siamo avvicinati ai rendimenti in media teorici. 
-Purtroppo però c'è da dire che questo indicatore ci fornisce una performance media che anno per anno potrà essere stata anche molto distante 
-dal valore ottenuto, e di conseguenza bisgona ricordare che il rendimento di un investimento si è attestato su un valore del passato non 
-vè alcuna garanzia che in futuro si ottenga lo stesso. 
+In Conclusione io mi ritengo soddisfatto, abbiamo ottenuto una differenza di $0.014769$ tra il CAGR e la simulazione, ci siamo avvicinati ai rendimenti in media teorici. 
+Purtroppo però c'è da dire che questo indicatore ci fornisce una performance media che anno per anno potrà essere stata anche molto distante dal valore ottenuto, e di conseguenza bisgona ricordare che il rendimento di un investimento si è attestato su un valore del passato non vè alcuna garanzia che in futuro si ottenga lo stesso. 
 
 Bibliografia : 
 
