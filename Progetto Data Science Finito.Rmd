@@ -41,7 +41,7 @@ sia di eseguire questa simulazione N volte.
 ## Quali sono questi Modelli ? 
  La spina dorsale di questa analisi si basa su 2 modelli e una teoria : 
  
-   1) Il Secondo pilastro della Teoria di John Murphy, ovvero : " Il Mercato si Ripete".   
+   1) Il Secondo pilastro della filosofia di Trading di John Murphy, ovvero : " Il Mercato si Ripete".   
    2) La Random Walk -> la formalizzazione dell'idea di prendere passi successivi in direzioni casuali. 
    3) La Simulazione di Montecarlo -> Un metodo per Trarre stime attraverso le simulazioni, generando una serie di Numeri  
                                       che tra loro non sono correlati, e che seguono una distribuzione di probabilità.  
