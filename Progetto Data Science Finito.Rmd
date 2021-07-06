@@ -242,7 +242,7 @@ price_sim %>%
 
 ```
 Come in precedenza andiamo a richiedere l'intervallo di confidenza dei prezzi alla fine della simulazione 
-```{r}
+```{r, echo = FALSE}
 end_stock_prices <- price_sim %>%
   filter(Day == max(Day))
 probs <- c(.005, .025, .25, .5, .75, .975, .995)
@@ -262,7 +262,7 @@ Questa struttura sarà ripetuta per un N iterazioni dando per scontato un tasso 
 
 Noi utilizzeremo il CAGR come un'indicatore per calcolare il rendimento medio di un investimento in un dato periodo, ottenendo una performance media annuale. 
 
-```{r}
+```{r, echo = FALSE}
 # definiamo i nostri input 
 N_hist <- nrow(TSLA) / 252 
 p_start_hist <- TSLA$TSLA.Adjusted[[1]]
