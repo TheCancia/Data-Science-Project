@@ -73,7 +73,13 @@ TSLA %>% head()
 ```
 La tabella contiene i dati essenziali di una qualsiasi analisi tecnica, ovvero il prezzo di apertura, chiusura, massimo, minimo, il volume e l'adjusted price.
 Ricordiamo che la natura di questi dati è influenzata da moltissimi fattori (anche non strettamente economici, vedasi i tweet di Elon Musk, oppure la CoCa Cola e Ronaldo), quindi andiamo a considerare l'Adjusted, ovvero il valore di un titolo azionario omettendo gli Stock Split.
-
+Ottenuti i dati possiamo subito richiedere una chartSeries che includa il prezzo di chiusura.
+```{r, echo = FALSE}
+TSLA %>% 
+  Ad() %>%
+  chartSeries()
+```
+Prima di iniziare ad analizzare in modo più approfondito questo titolo, visualizziamolo tramite una Chart Series, ovvero l'espressione del prezzo di chiusura di un titolo azionario (in questo caso Tsla), di primo impatto ci rendiamo conto che ha subito una flessione importante, ma questo grafico ci dice ben poco, andiamo ad approfondire meglio questo andamento tramite qualche indicatore tecnico. 
 ## Un'occhiata al Grafico 
 
 Un'approccio diametralmente opposto rispetto al Quantitative Trading è il Trading con i Grafici, ovvero l'utilizzo di grafici
