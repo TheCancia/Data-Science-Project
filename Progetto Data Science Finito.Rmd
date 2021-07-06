@@ -288,3 +288,14 @@ In Conclusione io mi ritengo soddisfatto, abbiamo ottenuto una differenza di $-0
 Purtroppo però c'è da dire che questo indicatore ci fornisce una performance media che anno per anno potrà essere stata anche molto distante 
 dal valore ottenuto, e di conseguenza bisgona ricordare che il rendimento di un investimento si è attestato su un valore del passato non 
 vè alcuna garanzia che in futuro si ottenga lo stesso. 
+
+Bibliografia : 
+
+   - Mary Buffett, David Clark The New Buffettology 
+   - Philip A. Fisher Common Stocks and Uncommon Profits and Other Writings Wiley Investment Classics
+   - Cathy O’Neil Weapons of Math Destruction How Big Data Increases Inequality and Threatens Democrac 
+   - http://www.traderpedia.it/
+   - https://en.wikipedia.org/wiki/Random_walk
+   - https://wowscienza.it/cose-la-simulazione-montecarlo/
+   - Corso di Statistica 
+   - Marcos Lòpez de Prado Advances in Financial Machine Learning 
